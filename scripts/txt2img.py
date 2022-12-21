@@ -215,8 +215,12 @@ def main(opt):
     seed_everything(opt.seed)
 
     config = OmegaConf.load(f"{opt.config}")
-    device = torch.device("cuda") if opt.device == "cuda" else torch.device("cpu")
-    model = load_model_from_config(config, f"{opt.ckpt}", device)
+    model = load_model_from_config(config, f"{opt.ckpt}")
+
+    if not torch.cuda.is_available():
+        raise RuntimeError(f"Where's that gpu at yo?")
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    model = model.to(device)
 
     if opt.plms:
         sampler = PLMSSampler(model, device=device)
