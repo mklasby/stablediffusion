@@ -241,6 +241,7 @@ def main(opt):
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
     if not opt.from_file:
         prompt = opt.prompt
+        print(f"Prompting with: {[prompt]}")
         assert prompt is not None
         data = [batch_size * [prompt]]
 
