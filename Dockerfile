@@ -1,23 +1,43 @@
 FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-devel
-# FROM nvcr.io/nvidia/pytorch:22.12-py3
 
-SHELL ["conda", "run", "-n", "base", "/bin/bash", "-c"]
-
+ARG USERNAME=user
+ARG USER_UID=1000003
+ARG USER_GID=1000001
 ARG WORKSPACE_DIR=/home/user/stablediffusion
+
+# SHELL ["conda", "run", "-n", "base", "/bin/bash", "-c"]
+SHELL ["/bin/bash", "-c"]
+
+# Create the user
+RUN groupadd --gid ${USER_GID} ${USERNAME} \
+    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME}
 
 ENV NVIDIA_DRIVER_CAPABILITIES="all" \
     WORKSPACE_DIR=${WORKSPACE_DIR}
 
 RUN mkdir -p ${WORKSPACE_DIR} \
+    && chown -R $USER_UID:$USER_GID ${WORKSPACE_DIR} \
     && apt-get update \
-    && apt-get install -y git ssh tmux vim curl htop sudo libgl1
+    && apt-get install -y git ssh tmux vim curl htop sudo libgl1 ffmpeg libsm6 libxext6
 
+RUN echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
+    && chmod 0440 /etc/sudoers.d/${USERNAME}
+
+RUN chown -R ${USER_UID}:${USER_GID} /opt/conda
+
+USER ${USERNAME}
 WORKDIR ${WORKSPACE_DIR}
 COPY ./* ${WORKSPACE_DIR}/
-RUN /opt/conda/bin/conda env update -n base -f environment.yaml
+# RUN echo "unset SUDO_UID SUDO_GID SUDO_USER" >> $HOME/.bashrc
+# RUN unset SUDO_UID SUDO_GID SUDO_USER
 RUN conda init bash && exec bash
-# ENTRYPOINT ["/usr/bin/env"]
-# CMD ["bash"]
+# RUN conda env create --file environment.yaml --prefix ./.venv
+# RUN echo "conda activate /home/user/stablediffusion/.venv" >> $HOME/.bashrc 
+# RUN sudo /opt/conda/bin/conda env update -n base -f environment.yaml
+RUN conda env update -n base -f environment.yaml
+
+# # # Install xformers for memory efficient flash attention
+# RUN conda install xformers -c xformers/label/dev
 # CMD tail -f /dev/null
 
 
