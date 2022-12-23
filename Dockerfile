@@ -37,7 +37,7 @@ RUN conda init bash && exec bash
 RUN conda env update -n base -f environment.yaml
 
 # # # Install xformers for memory efficient flash attention
-# RUN conda install xformers -c xformers/label/dev
+RUN conda install xformers -c xformers/label/dev
 # CMD tail -f /dev/null
 
 

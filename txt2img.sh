@@ -1,12 +1,13 @@
 #!/bin/bash
 
-PROMPT=a dog riding a rocket to the moon by salvador dali
 export OUTDIR=./out
 export CKPT=./models/v2-1_512-ema-pruned.ckpt
 export SEED=42
-export STEPS=500
-
-python ./scripts/txt2img.py --prompt ${PROMPT} \
+export STEPS=50
+echo $PROMPT
+python ./scripts/txt2img.py \
+--prompt "a cartoon sketch of a pregnancy announcement, diffuse lighting, unity, baby, christmas" \
 --outdir ${OUTDIR} \
 --ckpt=${CKPT} \
---steps=${STEPS}
+--steps=${STEPS} \
+--neg-prompt "ugly, sad, deformed"

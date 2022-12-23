@@ -61,6 +61,13 @@ def parse_args():
         help="the prompt to render"
     )
     parser.add_argument(
+        "--neg-prompt",
+        type=str,
+        nargs="?",
+        default="ugly, deformed",
+        help="the negative prompt to avoid"
+    )
+    parser.add_argument(
         "--outdir",
         type=str,
         nargs="?",
@@ -251,7 +258,7 @@ def main(opt):
             data = f.read().splitlines()
             data = [p for p in data for i in range(opt.repeat)]
             data = list(chunk(data, batch_size))
-
+    negative_prompt_data = [batch_size * [opt.neg_prompt]]
     sample_path = os.path.join(outpath, "samples")
     os.makedirs(sample_path, exist_ok=True)
     sample_count = 0
@@ -341,10 +348,10 @@ def main(opt):
         model.ema_scope():
             all_samples = list()
             for n in trange(opt.n_iter, desc="Sampling"):
-                for prompts in tqdm(data, desc="data"):
+                for prompts, neg_prompts in tqdm(list(zip(data, negative_prompt_data)), desc="data"):
                     uc = None
                     if opt.scale != 1.0:
-                        uc = model.get_learned_conditioning(batch_size * [""])
+                        uc = model.get_learned_conditioning(neg_prompts)
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
                     c = model.get_learned_conditioning(prompts)
