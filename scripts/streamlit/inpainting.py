@@ -12,6 +12,7 @@ import pathlib
 
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.util import instantiate_from_config
+from utils import save_image
 
 
 torch.set_grad_enabled(False)
@@ -199,16 +200,13 @@ def run():
             st.write("Inpainted")
             for idx, image in enumerate(st.session_state["result"]):
                 st.image(image, output_format='PNG')
-                st.button("Save", key=idx, on_click=save_image, args=(image, idx, prompt, seed))
-
-
-def save_image(image, idx, prompt, seed):
-    st.info("Saving image...")
-    clean_prompt = "_".join(prompt.replace(","," ").split(" "))
-    out_path = pathlib.Path(f"./out/inpainting/{clean_prompt}_{seed}_{idx}.png")
-    image.save(out_path, "PNG")
-    st.success(f"Image saved to {out_path}")
-    
+                out_path = pathlib.Path(f"./out/inpainting/{clean_prompt}_{seed}_{idx}.png")
+                st.button(
+                    "Save",
+                    key=idx,
+                    on_click=save_image,
+                    args=(image, idx, prompt, seed, out_path)
+                )
 
 if __name__ == "__main__":
     run()

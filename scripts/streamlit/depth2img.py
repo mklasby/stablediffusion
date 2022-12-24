@@ -13,6 +13,7 @@ from scripts.txt2img import put_watermark
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.data.util import AddMiDaS
+from utils import save_image
 
 torch.set_grad_enabled(False)
 
@@ -149,17 +150,27 @@ def run():
                 callback=t_callback,
                 do_full_sample=do_full_sample,
             )
-            st.session_state["result"]=result
-        if "result" in st.session_state.keys():
-            st.write("Result")
-            result = st.session_state["result"]
-        for idx, image in enumerate(result):
-            st.image(image, output_format='PNG')
-            if st.button("Save", key=idx):
-                st.info("Saving image...")
-                out_path = pathlib.Path(f"./out/depth2img/{prompt}_{idx}.png")
-                image.save(out_path, "PNG")
-                st.success(f"Image saved to {out_path}")
+            for idx, image in enumerate(result):
+                st.image(image, output_format='PNG')
+                out_path = pathlib.Path(
+                    f"./out/depth2img/" 
+                )
+                st.button(
+                    "Save",
+                    key=idx,
+                    on_click=save_image,
+                    args=(image, idx, prompt, seed, out_path)
+                )
+
+        # if "result" in st.session_state.keys():
+        #     st.write("Result")
+        #     result = st.session_state["result"]
+            
+        #     if st.button("Save", key=idx):
+        #         st.info("Saving image...")
+        #         out_path = pathlib.Path(f"./out/depth2img/{prompt}_{idx}.png")
+        #         image.save(out_path, "PNG")
+        #         st.success(f"Image saved to {out_path}")
 
 
 
