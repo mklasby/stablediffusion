@@ -11,14 +11,8 @@ export PORT=8000
 streamlit run \
  --server.port=${PORT} \
  --server.runOnSave True \
- scripts/streamlit/depth2img.py configs/stable-diffusion/v2-midas-inference.yaml ./models/512-depth-ema.ckpt
+ scripts/streamlit/inpainting.py \
+ configs/stable-diffusion/v2-inpainting-inference.yaml \
+ ./models/512-inpainting-ema.ckpt
 
 # ssh -L 8000:<streamlit server> mike@moraine -> Then open localhost:8000
-# \
-# --prompt "a cartoon sketch of a pregnancy announcement, beautiful, happy, pretty, handsome, christmas" \
-# --outdir ${OUTDIR} \
-# --init-img ${INIT_IMAGE} \
-# --ckpt=${CKPT} \
-# --ddim_steps=${STEPS} \
-# --strength 0.7 \
-# --neg-prompt  "ugly, deformed, bad anatomy, bad hands, crowd, sad"

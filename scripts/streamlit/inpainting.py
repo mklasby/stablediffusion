@@ -8,6 +8,7 @@ from omegaconf import OmegaConf
 from einops import repeat
 from streamlit_drawable_canvas import st_canvas
 from imwatermark import WatermarkEncoder
+import pathlib
 
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.util import instantiate_from_config
@@ -37,13 +38,16 @@ def initialize_model(config, ckpt):
 
     return sampler
 
-
+@st.cache(hash_funcs={torch.Tensor: lambda x: x.cpu().numpy().tobytes()})
 def make_batch_sd(
         image,
         mask,
         txt,
-        device,
+        _device,
         num_samples=1):
+    device=_device
+    # image=_image
+    # mask=_mask
     image = np.array(image.convert("RGB"))
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image).to(dtype=torch.float32) / 127.5 - 1.0
@@ -65,23 +69,25 @@ def make_batch_sd(
     }
     return batch
 
-
-def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512, eta=1.):
+@st.cache(hash_funcs={torch.Tensor: lambda x: x.cpu().numpy().tobytes(), DDIMSampler: lambda x: None}, suppress_st_warning=True)
+def inpaint(_sampler, image, mask, prompt, negative_prompt, seed, scale, ddim_steps, num_samples=1, w=512, h=512, eta=1.):
+    st.text(f"Painting with prompt: {prompt} - {negative_prompt}")
+    sampler=_sampler
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = sampler.model
 
-    print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
-    wm = "SDV2"
-    wm_encoder = WatermarkEncoder()
-    wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
-
-    prng = np.random.RandomState(seed)
+    # print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
+    # wm = "SDV2"
+    # wm_encoder = WatermarkEncoder()
+    # wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
+    wm_encoder=None
+    prng = np.random.RandomState(int(seed))
     start_code = prng.randn(num_samples, 4, h // 8, w // 8)
     start_code = torch.from_numpy(start_code).to(device=device, dtype=torch.float32)
 
     with torch.no_grad(), \
             torch.autocast("cuda"):
-            batch = make_batch_sd(image, mask, txt=prompt, device=device, num_samples=num_samples)
+            batch = make_batch_sd(image, mask, txt=prompt, _device=device, num_samples=num_samples)
 
             c = model.cond_stage_model.encode(batch["txt"])
 
@@ -100,7 +106,7 @@ def inpaint(sampler, image, mask, prompt, seed, scale, ddim_steps, num_samples=1
             cond = {"c_concat": [c_cat], "c_crossattn": [c]}
 
             # uncond cond
-            uc_cross = model.get_unconditional_conditioning(num_samples, "")
+            uc_cross = model.get_unconditional_conditioning(num_samples, negative_prompt)
             uc_full = {"c_concat": [c_cat], "c_crossattn": [uc_cross]}
 
             shape = [model.channels, h // 8, w // 8]
@@ -138,12 +144,13 @@ def run():
         image = image.resize((width, height))
 
         prompt = st.text_input("Prompt")
+        neg_prompt = st.text_input("Negative Prompt")
 
-        seed = st.number_input("Seed", min_value=0, max_value=1000000, value=0)
-        num_samples = st.number_input("Number of Samples", min_value=1, max_value=64, value=1)
+        seed = int(st.number_input("Seed", min_value=0, max_value=1000000, value=0))
+        num_samples = int(st.number_input("Number of Samples", min_value=1, max_value=64, value=1))
         scale = st.slider("Scale", min_value=0.1, max_value=30.0, value=10., step=0.1)
         ddim_steps = st.slider("DDIM Steps", min_value=0, max_value=50, value=50, step=1)
-        eta = st.sidebar.number_input("eta (DDIM)", value=0., min_value=0., max_value=1.)
+        eta = st.slider("eta (DDIM)", value=0., min_value=0., max_value=1.)
 
         fill_color = "rgba(255, 255, 255, 0.0)"
         stroke_width = st.number_input("Brush Size",
@@ -176,20 +183,34 @@ def run():
                 mask = Image.fromarray(mask)
 
                 result = inpaint(
-                    sampler=sampler,
+                    _sampler=sampler,
                     image=image,
                     mask=mask,
                     prompt=prompt,
+                    negative_prompt=neg_prompt,
                     seed=seed,
-                    scale=scale,
+                    scale=scale, 
                     ddim_steps=ddim_steps,
                     num_samples=num_samples,
                     h=height, w=width, eta=eta
                 )
-                st.write("Inpainted")
-                for image in result:
-                    st.image(image, output_format='PNG')
+                st.session_state["result"]=result
+        if 'result' in st.session_state:
+            st.write("Inpainted")
+            for idx, image in enumerate(st.session_state["result"]):
+                st.image(image, output_format='PNG')
+                st.button("Save", key=idx, on_click=save_image, args=(image, idx, prompt, seed))
 
+
+def save_image(image, idx, prompt, seed):
+    st.info("Saving image...")
+    clean_prompt = "_".join(prompt.replace(","," ").split(" "))
+    out_path = pathlib.Path(f"./out/inpainting/{clean_prompt}_{seed}_{idx}.png")
+    image.save(out_path, "PNG")
+    st.success(f"Image saved to {out_path}")
+    
 
 if __name__ == "__main__":
     run()
+    
+    #pregnant, pregnancy, huge belly, fat

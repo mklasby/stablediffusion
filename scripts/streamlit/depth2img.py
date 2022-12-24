@@ -2,6 +2,7 @@ import sys
 import torch
 import numpy as np
 import streamlit as st
+import pathlib
 from PIL import Image
 from omegaconf import OmegaConf
 from einops import repeat, rearrange
@@ -148,9 +149,18 @@ def run():
                 callback=t_callback,
                 do_full_sample=do_full_sample,
             )
+            st.session_state["result"]=result
+        if "result" in st.session_state.keys():
             st.write("Result")
-            for image in result:
-                st.image(image, output_format='PNG')
+            result = st.session_state["result"]
+        for idx, image in enumerate(result):
+            st.image(image, output_format='PNG')
+            if st.button("Save", key=idx):
+                st.info("Saving image...")
+                out_path = pathlib.Path(f"./out/depth2img/{prompt}_{idx}.png")
+                image.save(out_path, "PNG")
+                st.success(f"Image saved to {out_path}")
+
 
 
 if __name__ == "__main__":
