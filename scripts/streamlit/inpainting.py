@@ -200,7 +200,7 @@ def run():
             st.write("Inpainted")
             for idx, image in enumerate(st.session_state["result"]):
                 st.image(image, output_format='PNG')
-                out_path = pathlib.Path(f"./out/inpainting/{clean_prompt}_{seed}_{idx}.png")
+                out_path = pathlib.Path("./out/inpainting/")
                 st.button(
                     "Save",
                     key=idx,
